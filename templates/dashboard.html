@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stock Price Predictor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; padding: 2rem; }
+    h1 { font-size: 1.8rem; margin-bottom: 1.5rem; }
+    .controls { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    input, select, button {
+      padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid #334155;
+      background: #1e293b; color: #e2e8f0; font-size: 0.95rem;
+    }
+    button { background: #6366f1; border: none; cursor: pointer; }
+    button:hover { background: #4f46e5; }
+    .chart-box { background: #1e293b; border-radius: 12px; padding: 1.5rem; }
+    #error { color: #fca5a5; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>📈 Stock Price Predictor</h1>
+  <div class="controls">
+    <input id="ticker" value="AAPL" placeholder="Ticker (e.g. AAPL)" style="width:140px"/>
+    <select id="days">
+      <option value="7">7 days ahead</option>
+      <option value="14">14 days ahead</option>
+      <option value="30" selected>30 days ahead</option>
+    </select>
+    <button onclick="loadChart()">Predict</button>
+  </div>
+  <div id="error"></div>
+  <div class="chart-box">
+    <canvas id="stockChart" height="100"></canvas>
+  </div>
+
+  <script>
+    let chart = null;
+
+    async function loadChart() {
+      const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+      const days = document.getElementById('days').value;
+      document.getElementById('error').textContent = '';
+
+      const res = await fetch(`/api/predict?ticker=${ticker}&days=${days}`);
+      const data = await res.json();
+
+      if (data.error) {
+        document.getElementById('error').textContent = data.error;
+        return;
+      }
+
+      const labels = [...data.dates, ...Array.from({length: data.future.length}, (_, i) => `+${i+1}d`)];
+      const actualData = [...data.actual, ...Array(data.future.length).fill(null)];
+      const predData = [...data.predicted, ...Array(data.future.length).fill(null)];
+      const futureData = [...Array(data.actual.length).fill(null), ...data.future];
+
+      if (chart) chart.destroy();
+      chart = new Chart(document.getElementById('stockChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Actual', data: actualData, borderColor: '#60a5fa', tension: 0.3, pointRadius: 0 },
+            { label: 'Predicted', data: predData, borderColor: '#a78bfa', tension: 0.3, pointRadius: 0, borderDash: [4,4] },
+            { label: 'Future Forecast', data: futureData, borderColor: '#34d399', tension: 0.3, pointRadius: 3 }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color: '#e2e8f0' } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', maxTicksLimit: 12 }, grid: { color: '#1e293b' } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+          }
+        }
+      });
+    }
+
+    loadChart();
+  </script>
+</body>
+</html>
