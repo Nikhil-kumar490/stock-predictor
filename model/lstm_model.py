@@ -19,3 +19,5 @@ def build_lstm(seq_len: int = 60, n_features: int = 1) -> tf.keras.Model:
     ])
     model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae'])
     return model
+
+# feat-3layer-lstm
